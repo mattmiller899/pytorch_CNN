@@ -1,0 +1,27 @@
+singularity exec --nv ~/singularity/pytorch.img.old python3.6 ./code/multikmer_classifier.py -g -ct -cv -sc -up -us -ur -uc -ua -gd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300 -vd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/virus/300 -p /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/test_everything/pos_in_no_n -s /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/test_everything/seq_in_no_n -a /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/test_everything/aa_in -b 50 -e 10 -c /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/test_everything/cont_in_no_n -o ./results/300/virus/3mer_3f_2nc_2fc_2pa_10eps_revfor_cont_seq_pos_aa_monokmer_no_n_1000filts.txt -f ./results/300/virus/figs/3mer_3f_2nc_2fc_2pa_10eps_revfor_cont_seq_pos_aa_monokmer_no_n_1000filts -fs 3 -nc 2 -nf 2 -pa 2 -kf 4 3
+starting
+len kmer sizes = 1
+reading files from /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY322437-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684104-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KF493731-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/LT598836-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/JX885207-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_031465-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/JN036606-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684106-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684112-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/LT994651-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_023423-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_036594-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_030230-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/MF782455-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684087-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/HG428764-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684105-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_015326-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KU702951-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/LT839607-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/KY684109-reads.fa
+reading /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/girus/300/NC_023639-reads.fa
+Detailed performance metrics for this job will be available at https://metrics.hpc.arizona.edu/#job_viewer?action=show&realm=SUPREMM&resource_id=5&local_job_id=950584 by 8am on 2022/08/09.
