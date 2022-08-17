@@ -18,8 +18,7 @@ import gc
 
 """
 Run on local with:
-python code/deep_learning/multikmer_classifier.py -ct -cv -i data/multikmer_test/in_small -p data/multikmer_test/pos_in -s data/multikmer_test/seq_in -a data/multikmer_test/aa_in -b 5 -e 1 -c data/multikmer_test/cont_in -ua -us -up -uc -o data/multikmer_test/test_results/test_out.txt -f data/plotting -g -sc 3 -kf 4
-
+python ./code/multikmer_classifier.py -g -ct -cv -sc -up -us -ur -uc -ua -gd ./data/girus -vd ./data/virus -p ./embeddings/pos -s ./embeddings/seq -a ./embeddings/aa -b 50 -e 10 -c ./embeddings/cont -o ./results/test_out.txt -f ./results/figs -fs 3 -nc 2 -nf 2 -pa 2 -kf 4 3
 
 """
 
@@ -57,7 +56,6 @@ def main(args):
     kfolds = args.kfold
     histograms = args.histograms
 
-    labels = [0, 1]
     #TODO ADD BACK N
     bases = ['A', 'T', 'G', 'C']
     max_kmer = max(KMER_SIZES)
@@ -75,19 +73,15 @@ def main(args):
     check_val = True
     check_test = True
     """
-    (tab_data, kmer_vocab, vec_sizes, num_kmers_per_read,
-     train_val_fields) = utils.load_reads_create_kmers_multidir(KMER_SIZES, [gv_dir, v_dir], pos_dir, seq_dir, cont_dir, aa_dir,
-                                                       use_seq, use_pos, use_cont, use_rev, use_aa)
-
-
-    print(f"tab data shape = {len(tab_data.examples)}")
-    print(f"tab data kmers = {tab_data.examples[0].kmers}\n tab data label = {tab_data.examples[0].labels}")
+    (all_reads, all_labels, emb_vecs, vec_sizes, num_kmers_per_read, tokenizer) = utils.load_reads_tokenized(
+        KMER_SIZES, [gv_dir, v_dir], pos_dir, seq_dir, cont_dir, aa_dir, use_seq, use_pos, use_cont, use_rev, use_aa)
+    #print(f"num_reads = {len(reads)}\nread = {reads[0]}")
+    #print(f"emb_vecs = {emb_vecs}\nlen emb_vecs = {len(emb_vecs)}")
     #TODO CHANGE
     random.seed(22)
-    input_vecs = kmer_vocab.vectors
-    vec2idx = {tuple(vec.numpy()): idx for idx, vec in enumerate(input_vecs)}
-    idx2ntide = kmer_vocab.itos
-    NUM_KMERS = len(tab_data.examples[0].kmers)
+    input_vecs = emb_vecs
+    idx2ntide = {v: k for k, v in tokenizer.items()}
+    NUM_KMERS = num_kmers_per_read
     if not split_channels:
         vec_sizes = [sum(vec_sizes)]
     #split data is a tuple
@@ -96,9 +90,9 @@ def main(args):
     auprcs = []
     with open(out_file, "w") as out:
         #Create model, train, and test k-fold times
-        for curr_fold, (train_exs, test_exs) in enumerate(utils.split_dataset(tab_data, kfolds)):
+        for curr_fold, (train_reads, test_reads) in enumerate(utils.split_dataset_tokenized(all_reads, kfolds)):
             print(f"training")
-            train_iter, val_iter, test_iter = utils.create_iterators(train_exs, test_exs, BATCH_SIZE, curr_fold, train_val_fields)
+            train_iter, val_iter, test_iter = utils.create_iterators_tokenized(train_reads, test_reads, BATCH_SIZE, curr_fold)
             #Create model
             cnn = mods.KmerCNN(input_vecs, NUM_KMERS, num_channels, num_convs, num_fcs, vec_sizes, filter_size=filter_size,
                                use_gpu=use_gpu)

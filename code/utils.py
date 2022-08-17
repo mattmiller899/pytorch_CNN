@@ -1301,5 +1301,269 @@ def print_mem_usage(device):
     print(f"max mem reserved = {torch.cuda.max_memory_reserved(device) / 1024}KB")
     return
 
-def load_embeddings(embed_file, kmer_size):
+def load_embeddings(embed_file):
     return vocab.Vectors(f"{embed_file}")
+
+
+def load_reads_tokenized(kmer_sizes, in_dirs, read_size, step_size, use_stepk=True, use_rev=True, multikmer_tokenizer=None):
+    reads = []
+    print(f"len kmer sizes = {len(kmer_sizes)}")
+    # Create kmer tokenizer
+    multikmer_tokenizer = {}
+    kmer_idx = 0
+    for tmp_kmer in kmer_sizes:
+        tmp_all_kmers = [''.join(p) for p in itertools.product(['A', 'C', 'G', 'T'], repeat=tmp_kmer)]
+        for i in tmp_all_kmers:
+            multikmer_tokenizer[i] = kmer_idx
+            kmer_idx += 1
+    reads, labels = read_fastas_from_dir_tokenized(
+        in_dirs, kmer_sizes, multikmer_tokenizer, read_size, use_stepk=use_stepk, use_rev=use_rev)
+    # examples = read_fastas_from_dir_multiorf(in_dir, kmer_sizes, train_val_fields, label='multikmer', use_rev=use_rev)
+    num_kmers_per_read = len(reads[1])
+    print(f"num_kmers_per_read = {num_kmers_per_read}")
+    # Load embedding vectors
+    #emb_vecs, vec_sizes = load_embeds_tokenized(kmer_sizes, multikmer_tokenizer, cont_dir, pos_dir, seq_dir, aa_dir,
+    #                                            use_cont, use_pos, use_seq, use_aa)
+    # Builds the known word vocab for code and comments from the pretrained vectors
+    #print(f"vec sizes = {vec_sizes}")
+    return reads, labels, multikmer_tokenizer, num_kmers_per_read
+
+
+def read_fastas_from_dir_tokenized(in_dirs, kmer_sizes, tokenizer, read_size, use_stepk=True, use_rev=True):
+    all_reads, all_labels = [], []
+    all_nucs = ["A","C","G","T"]
+    for label_num, in_dir in enumerate(in_dirs):
+        print(f"reading files from {in_dir}")
+        for count, in_file in enumerate(glob.glob(f"{in_dir}/*.fa")):
+            print(f"reading {in_file}")
+            for record in SeqIO.parse(in_file, "fasta"):
+                # TODO MAY NEED TO CHANGE BACK LATER
+                # tmp_arr.extend(labels)
+                tmp_kmer_arr = []
+                skipped = False
+                for kmer in kmer_sizes:
+                    if use_stepk:
+                        stepk = kmer
+                    else:
+                        stepk = 1
+                    seq_id = record.id
+                    for_seq = re.sub(r'[N]', random.choice(all_nucs), str(record.seq.upper()))
+                    length = len(for_seq)
+                    if length != read_size:
+                        skipped = True
+                        continue
+                    # seq and rev_comp
+                    tmp_for = [tokenizer[for_seq[j:j + kmer]] for j in range(0, length - kmer + 1, stepk)]
+                    tmp_kmer_arr.extend(tmp_for)
+
+                    if use_rev:
+                        rev_seq = re.sub(r'[N]', random.choice(all_nucs),
+                                         str(Seq.reverse_complement(record.seq).upper()))
+                        tmp_rev = [tokenizer[rev_seq[j:j + kmer]] for j in range(0, length - kmer + 1, stepk)]
+                        tmp_kmer_arr.extend(tmp_rev)
+
+                # print(f"tmp kmer arr = {tmp_kmer_arr}")
+                if not skipped:
+                    all_reads.append(tmp_kmer_arr)
+                    all_labels.append(label_num)
+                # print(f"examples = {examples[0].__dict__}")
+                # exit()
+    return np.array(all_reads), np.array(all_labels)
+
+def load_embeds_tokenized(kmer_sizes, tokenizer, cont_dir, pos_dir, seq_dir, aa_dir, use_cont, use_pos, use_seq, use_aa):
+    emb_vecs, vec_sizes = [], []
+    if use_cont:
+        #TODO COMBINING VECS OF SAME TYPES/DIFF K'S
+        vec_dict = combine_embeds_tokenized(kmer_sizes, tokenizer, cont_dir)
+        emb_vecs.append(vec_dict)
+        vec_sizes.append(len(list(vec_dict.values())[0]))
+    if use_pos:
+        #os.remove(f"{pos_dir}/*.pt")
+        vec_dict = combine_embeds_tokenized(kmer_sizes, tokenizer, pos_dir)
+        emb_vecs.append(vec_dict)
+        vec_sizes.append(len(list(vec_dict.values())[0]))
+    if use_seq:
+        #os.remove(f"{seq_dir}/*.pt")
+        vec_dict = combine_embeds_tokenized(kmer_sizes, tokenizer, seq_dir)
+        #print(f"tmp_vec = {tmp_vec.__dict__}")
+        emb_vecs.append(vec_dict)
+        vec_sizes.append(len(list(vec_dict.values())[0]))
+    if use_aa:
+        vec_dict = combine_embeds_tokenized(kmer_sizes, tokenizer, aa_dir)
+        # print(f"tmp_vec = {tmp_vec.__dict__}")
+        emb_vecs.append(vec_dict)
+        vec_sizes.append(len(list(vec_dict.values())[0]))
+    if len(vec_sizes) == 0:
+        print("ERROR: No embedding vectors loaded. Exiting...")
+        exit(1)
+    return emb_vecs, vec_sizes
+
+def combine_embeds_tokenized(kmer_sizes, tokenizer, in_dir):
+    print(f"kmer sizes = {kmer_sizes}")
+    vec_dict = {}
+    for k in kmer_sizes:
+        kmer_glob = glob.glob(f"{in_dir}/*{k}k*.txt")
+        kmer_glob.extend(glob.glob(f"{in_dir}/*{k}mer*.txt"))
+        kmer_glob.extend(glob.glob(f"{in_dir}/*{k}aa*.txt"))
+        print(f"glob = {kmer_glob}")
+        for in_file in kmer_glob:
+            with open(in_file, "r") as f:
+                _ = f.readline()
+                for l in f:
+                    larr = l.rstrip().split(" ")
+                    if "s" in larr[0]:
+                        continue
+                    vecs = [float(i) for i in larr[1:]]
+                    vec_dict[tokenizer[larr[0]]] = vecs
+    return vec_dict
+
+def split_dataset_tokenized(reads, kfolds):
+    kf = KFold(n_splits=kfolds, random_state=22, shuffle=True)
+    examples = np.array(reads)
+    for curr_fold, (train_index, test_index) in enumerate(kf.split(examples)):
+        yield (examples[train_index], examples[test_index])
+
+def create_iterators_tokenized(train_reads, test_reads, batch_size, curr_fold):
+    train_val_ds = data.Dataset(train_exs, train_val_fields)
+    train_data, val_data = train_val_ds.split(split_ratio=[0.9, 0.1])
+    test_data = data.Dataset(test_exs, train_val_fields)
+    # Creates batched TRAIN, DEV, TEST sets for faster training (uses auto-batching)
+    train_iter = data.BucketIterator(
+        train_data,
+        batch_size=batch_size,
+        train=True,
+        sort_key=lambda x: x.kmers,
+        shuffle=True
+    )
+
+    val_iter = data.BucketIterator(
+        val_data,
+        batch_size=batch_size,
+        train=False,
+        sort_key=lambda x: x.kmers,
+        shuffle=True
+    )
+    test_iter = data.BucketIterator(
+        test_data,
+        batch_size=batch_size,
+        train=False,
+        sort_key=lambda x: x.kmers,
+        shuffle=True
+    )
+    return train_iter, val_iter, test_iter
+
+class ReadsDatasetCNN(torch.utils.data.Dataset):
+    def __init__(self, all_reads, all_labels):
+        self.num_reads = len(all_reads)
+        self.labels = torch.LongTensor(all_labels)
+        self.reads = torch.LongTensor(all_reads)
+
+    def __len__(self):
+        return len(self.reads)
+
+    def __getitem__(self, idx):
+        curr_read = self.reads[idx]
+        curr_label = self.labels[idx]
+        return curr_read, curr_label
+        #return self.embedding(torch.LongTensor(curr_read)), torch.LongTensor(curr_label)
+
+
+def read_fastas_from_dirs_CNN(in_dirs, read_size, kmer_sizes, use_stepk=True, use_rev=True, kmer_dict=None):
+    all_reads, all_labels = [], []
+    all_nucs = ["A", "C", "T", "G"]
+    if kmer_dict == None:
+        all_kmers = []
+        for k in kmer_sizes:
+            all_kmers.extend(generate_kmers(k))
+        kmer_dict = {}
+        for i, tmp_kmer in enumerate(all_kmers):
+            kmer_dict[tmp_kmer] = i
+    for label_num, in_dir in enumerate(in_dirs):
+        for count, in_file in enumerate(glob.glob(f"{in_dir}/*.fa")):
+            print(f"reading {in_file}")
+            for record in SeqIO.parse(in_file, "fasta"):
+                tmp_nuc_arr = []
+                skipped = False
+                for kmer in kmer_sizes:
+                    if use_stepk:
+                        step_size = kmer
+                    else:
+                        step_size = 1
+                    for_seq = re.sub(r'[N]', random.choice(all_nucs), str(record.seq.upper()))
+                    length = len(for_seq)
+                    if length < read_size:
+                        skipped = True
+                        continue
+                    # seq and rev_comp
+                    tmp_for = []
+                    for j in range(0, read_size - kmer + 1, step_size):
+                        # try:
+                        tmp_for.append(kmer_dict[for_seq[j:j + kmer]])
+                        # except:
+                        #    tmp_for.append(nuc_dict[random.choice(all_nucs)])
+                    # tmp_for = for_seq
+                    tmp_nuc_arr.extend(tmp_for)
+                    if use_rev:
+                        rev_seq = re.sub(r'[N]', random.choice(all_nucs), str(Seq.reverse_complement(record.seq).upper()))
+                        # tmp_rev = rev_seq
+                        tmp_rev = []
+                        for j in range(0, read_size - kmer + 1, step_size):
+                            # try:
+                            tmp_rev.append(kmer_dict[rev_seq[j:j + kmer]])
+                            # except:
+                            #    tmp_rev.append(nuc_dict[random.choice(all_nucs)])
+                        tmp_nuc_arr.extend(tmp_rev)
+                if not skipped:
+                    all_reads.append(tmp_nuc_arr)
+                    all_labels.append(label_num)
+                # print(f"tmp_nuc_arr = {tmp_nuc_arr}\ntmp_arr = {tmp_arr}")
+                # exit()
+    num_kmers_per_read = len(all_reads[0])
+    return np.array(all_reads), np.array(all_labels), kmer_dict, num_kmers_per_read
+
+def test_CNN(model, test_dataloader, criterion, device, args, num_classes):
+    with torch.no_grad():
+        preds = []
+        truths = []
+        round_preds = []
+        total_test_loss = 0.0
+        print(f"len test_dataloader = {len(test_dataloader)}")
+        for (data, labels) in test_dataloader:
+            data, labels = data.to(device), labels.float().to(device)
+            if args.debug:
+                print(f"data = {data}\nlabels = {labels}")
+            pred = model(data).view(labels.size(0))
+            if args.debug:
+                print(f"pred = {pred}")
+            #loss = criterion(torch.log(pred), labels)
+            loss = criterion(pred, labels)
+            total_test_loss += float(loss.item())
+            round_pred = torch.round(pred).cpu().numpy()
+            # print(f"round_pred = {round_pred}")
+            round_preds.extend(round_pred)
+            preds.extend(pred.cpu().numpy())
+            truths.extend(labels.cpu().numpy())
+        # print(f"rounds = {round_preds}\npreds = {preds}\ntruths = {truths}")
+        truths = np.array(truths)
+        print(f"truths shape = {truths.shape}")
+        print(f"unique truths = {np.unique(truths)}\nunique round_preds = {np.unique(round_preds)}")
+        acc = accuracy_score(truths, round_preds)
+        f1 = f1_score(truths, round_preds, average="macro")
+        prec = precision_score(truths, round_preds, average="macro")
+        rec = recall_score(truths, round_preds, average="macro")
+        """
+        # Convert truths to 2d array for AUROC
+        truths = np.array(truths)
+        truths_2d = np.zeros((truths.size, truths.max() + 1))
+        print(f"truths_2d size = {truths_2d.shape}")
+        truths_2d[np.arange(truths.size), truths] = 1
+        np.set_printoptions(threshold=np.inf)
+        print(f"truths_2d = {truths_2d}\nunique truths_2d = {np.unique(truths_2d)}\ntruths_2d shape = {truths_2d.shape}\npreds len = {len(preds)}")
+        preds_np = np.array(preds)
+        print(f"preds_np shape = {preds_np.shape}")
+        auprc = average_precision_score(truths_2d, preds_np)
+        auroc = roc_auc_score(truths_2d, preds_np, multi_class="ovr")
+        """
+        test_loss = total_test_loss / len(test_dataloader)
+        return test_loss, acc, f1, prec, rec
+        #return test_loss, acc, f1, prec, rec, auprc, auroc

@@ -9,9 +9,10 @@ import inspect
 
 class KmerCNN(nn.Module):
     def __init__(self, vecs, num_kmers, num_channels, num_convs, num_fcs, vec_sizes, fc_size=128, conv_features=100,
-                 pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False):
+                 pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False, debug=False):
         super(KmerCNN, self).__init__()
         #Save parameters
+        self.debug = debug
         self.FC_SIZE = fc_size
         self.NUM_CHANNELS = num_channels
         #print(f"NUM CHANNELS = {self.NUM_CHANNELS}\nvec_sizes = {vec_sizes}\nvecs size = {vecs.size()}\nvecs = {vecs}")
@@ -65,18 +66,22 @@ class KmerCNN(nn.Module):
         for j in range(self.NUM_CONVS):
             (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.FILTER_SIZE, self.STRIDE)
             (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.POOL_SIZE, self.POOL_SIZE)
+            #if self.debug:
+            #    print(f"h = {h} w = {w}")
         fc_input += h * w * self.CONV_FEATURES
         self.fc_sizes = [fc_input]
         self.fc_sizes.extend([self.FC_SIZE if i == 0 else int(self.FC_SIZE / (2 * i)) for i in range(self.NUM_FCS - 1)])
         self.fc_sizes.append(1)
-        print(f" fc sizes = {self.fc_sizes}")
+        #print(f" fc sizes = {self.fc_sizes}")
         self.fcs = nn.ModuleList([nn.Linear(self.fc_sizes[i], self.fc_sizes[i+1]) for i in range(self.NUM_FCS)])
         self.fc_bns = nn.ModuleList([nn.BatchNorm1d(1) for _ in range(self.NUM_FCS - 1)])
 
 
     def forward(self, kmers):
-        (_, batch_size) = kmers.size() # (num_kmers, batch)
-        kmers = kmers.transpose(0, 1) # (batch, num_kmers)
+        (batch_size, _) = kmers.size() # (batch, num_kmers)
+        #kmers = kmers.transpose(0, 1) # (batch, num_kmers)
+        #if self.debug:
+            #print(f"kmers.size = {kmers.size()}")
         if self.NUM_CHANNELS > 1:
             emb_chans = [self.embeddings[i](kmers) for i in range(self.NUM_CHANNELS)]
             #print(f"emb chans shape = ({len(emb_chans)}, {len(emb_chans[0])}, {len(emb_chans[0][0])}, {len(emb_chans[0][0][0])})")
@@ -84,14 +89,17 @@ class KmerCNN(nn.Module):
             #print(f"emb chans size = {emb_chans.size()}")
         else:
             emb_chans = self.embeddings[0](kmers).unsqueeze(1) # (batch, 1, num_kmers, embedding_size
-        #print(f"\nemb chans size = {emb_chans.size()}")
+        #if self.debug:
+        #    print(f"\nemb chans size = {emb_chans.size()}\nemb = {emb_chans[:,:,:,0]}")
         conv_input = emb_chans
         for i in range(self.NUM_CONVS):
             conv_input = F.max_pool2d(F.relu(self.convolutions[i](conv_input)), self.POOL_SIZE, self.POOL_SIZE) # (batch, CONV_FEATURES, ~1/2 num_kmers, ~1/2 embedding_size)
             conv_input = self.conv_bns[i](conv_input)
+            #if self.debug:
+            #    print(f"conv_input.size = {conv_input.size()}")
             #print(f"conv_input size = {conv_input.size()}")
-        #print(f"conv input size = {conv_input.size()}")
         fc_input = conv_input.view(batch_size, 1, self.fc_sizes[0]) # (batch, FC_sizes[0])
+        #print(f"fc input size = {fc_input.size()}")
         for i in range(self.NUM_FCS - 1):
             fc_input = F.relu(self.fcs[i](fc_input)) # (batch, FC2_IN)
             fc_input = self.fc_bns[i](fc_input)
