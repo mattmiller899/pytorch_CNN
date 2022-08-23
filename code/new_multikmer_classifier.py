@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 """
-python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -ef embeddings/cont/3k_5w_100s.txt -o results/ -g -b 10 -e 1
+python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -ef embeddings/cont/3k_5w_100s.txt -o results/ -g -b 10 -e 1 3
 """
 
 
@@ -98,7 +98,6 @@ def main(args):
                                 debug=args.debug
                                  ).to(device)
             model.apply(utils.init_weights)
-            #summary(model, (1, num_kmers_per_read, 4**args.kmer_size))
             opt = optim.Adam(model.parameters(), args.learning_rate)
             #TODO test other loss functions
             criterion = nn.BCELoss()
