@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 """
-python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -ef embeddings/cont/3k_5w_100s.txt -o results/ -g -b 10 -e 1 3
+python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -uc -cd embeddings/cont/ -up -pd embeddings/pos -o results/ -g -b 10 -e 1 -sc 3
 """
 
 
@@ -35,7 +35,6 @@ def main(args):
     num_channels = args.use_cont + args.use_pos + args.use_seq + args.use_aa if args.split_channels else 1
     # Load embeddings
     all_embs, vec_sizes = utils.load_embeddings_no_torchtext(args.kmer_sizes, args.use_cont, args.use_pos, args.use_seq, args.use_aa, args.cont_dir, args.pos_dir, args.seq_dir, args.aa_dir)
-    exit()
     # Load data
     all_reads, all_labels, kmer_dict, num_kmers_per_read = utils.read_fastas_from_dirs_CNN(
         [args.girus_dir, args.virus_dir],
@@ -89,7 +88,8 @@ def main(args):
                                 vec_sizes,
                                 filter_size=args.filter_size,
                                 use_gpu=args.use_gpu,
-                                debug=args.debug
+                                debug=args.debug,
+                                kmer_sizes=args.kmer_sizes
                                  ).to(device)
             model.apply(utils.init_weights)
             opt = optim.Adam(model.parameters(), args.learning_rate)

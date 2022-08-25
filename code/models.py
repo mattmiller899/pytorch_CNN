@@ -9,7 +9,7 @@ import inspect
 
 class KmerCNN(nn.Module):
     def __init__(self, vecs, num_kmers, num_channels, num_convs, num_fcs, vec_sizes, fc_size=128, conv_features=100,
-                 pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False, debug=False):
+                 pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False, debug=False, kmer_sizes=None):
         super(KmerCNN, self).__init__()
         #Save parameters
         self.debug = debug
@@ -30,7 +30,10 @@ class KmerCNN(nn.Module):
         self.CONV_FEATURES = conv_features
         self.DEVICE = torch.device("cuda" if use_gpu else "cpu")
         self.GROUPS = self.NUM_CHANNELS
-
+        self.KMER_SIZES = kmer_sizes
+        self.VOCAB_SIZE = 0
+        for k in kmer_sizes:
+            self.VOCAB_SIZE += 4**k
         if len(self.VEC_SIZES) != self.NUM_CHANNELS:
             print(f"ERROR: self.VEC_SIZES ({len(self.VEC_SIZES)}) != self.NUM_CHANNELS ({self.NUM_CHANNELS}). Exiting")
             exit()
@@ -39,16 +42,14 @@ class KmerCNN(nn.Module):
         if num_channels == 1:
             self.embeddings.append(nn.Embedding.from_pretrained(vecs))
         else:
-            start_pos = 0
-            vocab_size = vecs.size(0)
             for i in range(self.NUM_CHANNELS):
-                v = vecs[:, start_pos:start_pos + vec_sizes[i]]
+                v = vecs[i]
+                if self.debug:
+                    print(f"v.size = {v.size()}")
                 #print(f"{i} v size= {v.size()}\n{i} v = {v}")
-                padded = torch.zeros(vocab_size, self.MAX_SIZE)
+                padded = torch.zeros(self.VOCAB_SIZE, self.MAX_SIZE)
                 padded[:, :self.VEC_SIZES[i]] = v
                 self.embeddings.append(nn.Embedding.from_pretrained(padded, freeze=True))
-                start_pos += vec_sizes[i]
-
         #Convolutions
         self.convolutions = nn.ModuleList([nn.Conv2d(self.NUM_CHANNELS, self.CONV_FEATURES, self.FILTER_SIZE,
                                           groups=self.GROUPS, dilation=self.DILATION,
