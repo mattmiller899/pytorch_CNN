@@ -1489,7 +1489,8 @@ def read_fastas_from_dirs_CNN(in_dirs, read_size, kmer_sizes, use_stepk=True, us
                         step_size = kmer
                     else:
                         step_size = 1
-                    for_seq = re.sub(r'[N]', random.choice(all_nucs), str(record.seq.upper()))
+                    for_seq = re.sub(r'[NMRWYKVHD]', random.choice(all_nucs), str(record.seq.upper()))
+                    for_seq = re.sub(r'[U]', 'T', for_seq)
                     length = len(for_seq)
                     if length < read_size:
                         skipped = True
@@ -1504,7 +1505,8 @@ def read_fastas_from_dirs_CNN(in_dirs, read_size, kmer_sizes, use_stepk=True, us
                     # tmp_for = for_seq
                     tmp_nuc_arr.extend(tmp_for)
                     if use_rev:
-                        rev_seq = re.sub(r'[N]', random.choice(all_nucs), str(Seq.reverse_complement(record.seq).upper()))
+                        rev_seq = re.sub(r'[NMRWYKVHD]', random.choice(all_nucs), str(Seq.reverse_complement(record.seq).upper()))
+                        rev_seq = re.sub(r'[U]', 'T', rev_seq)
                         # tmp_rev = rev_seq
                         tmp_rev = []
                         for j in range(0, read_size - kmer + 1, step_size):
@@ -1567,3 +1569,55 @@ def test_CNN(model, test_dataloader, criterion, device, args, num_classes):
         test_loss = total_test_loss / len(test_dataloader)
         return test_loss, acc, f1, prec, rec
         #return test_loss, acc, f1, prec, rec, auprc, auroc
+
+def load_embeddings_no_torchtext(kmer_sizes, use_cont, use_pos, use_seq, use_aa, cont_dir, pos_dir, seq_dir, aa_dir):
+    all_embs, vec_sizes = [], []
+    if use_cont:
+        #with open(cont_file, "r") as f:
+        #    _ = f.readline()
+        #    ncols = len(f.readline().rstrip().split(" "))
+        #    print(f"ncols = {ncols}")
+        #cont_arr = np.loadtxt(cont_file, delimiter=" ", skiprows=1, usecols=range(1,ncols))
+        #cont_kmers = np.loadtxt(cont_file, delimiter=" ", skiprows=1, usecols=0, dtype=np.string)
+        #cont_arr = np.genfromtxt(cont_file, delimiter=" ", skip_header=1, dtype=None)
+        #all_embs.append(torch.from_numpy(cont_arr))
+        cont_tensor, cont_size = read_embeddings_no_torchtext(kmer_sizes, cont_dir)
+        all_embs.append(cont_tensor)
+        vec_sizes.append(cont_size)
+    if use_pos:
+        pos_tensor, pos_size = read_embeddings_no_torchtext(kmer_sizes, pos_dir)
+        all_embs.append(pos_tensor)
+        vec_sizes.append(pos_size)
+    if use_seq:
+        seq_tensor, seq_size = read_embeddings_no_torchtext(kmer_sizes, seq_dir)
+        all_embs.append(seq_tensor)
+        vec_sizes.append(seq_size)
+    if use_aa:
+        aa_tensor, aa_size = read_embeddings_no_torchtext(kmer_sizes, aa_dir)
+        all_embs.append(aa_tensor)
+        vec_sizes.append(aa_size)
+    if len(vec_sizes) == 0:
+        print("ERROR: No embedding vectors loaded. Exiting...")
+        exit(1)
+    return all_embs, vec_sizes
+
+
+def read_embeddings_no_torchtext(kmer_sizes, emb_dir):
+    emb_arr = None
+    for k in kmer_sizes:
+        kmer_glob = glob.glob(f"{emb_dir}/*{k}k*.txt")
+        kmer_glob.extend(glob.glob(f"{emb_dir}/*{k}mer*.txt"))
+        kmer_glob.extend(glob.glob(f"{emb_dir}/*{k}aa*.txt"))
+        print(f"glob = {kmer_glob}")
+        for in_file in kmer_glob:
+            with open(in_file, "r") as f:
+                ncols = len(f.readline().rstrip().split(" "))
+            print(f"ncols = {ncols}")
+            tmp_arr = np.loadtxt(in_file, delimiter=" ", usecols=range(1,ncols))
+            if emb_arr is None:
+                emb_arr = tmp_arr
+            else:
+                emb_arr = np.vstack((emb_arr, tmp_arr))
+    emb_size = len(emb_arr[0])
+    emb_tensor = torch.from_numpy(emb_arr)
+    return emb_tensor, emb_size

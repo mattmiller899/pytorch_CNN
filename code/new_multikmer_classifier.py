@@ -33,27 +33,21 @@ def main(args):
         print(f"num_classes = {num_classes}")
     NUM_KMERS = len(args.kmer_sizes)
     num_channels = args.use_cont + args.use_pos + args.use_seq + args.use_aa if args.split_channels else 1
-
     # Load embeddings
-    embed_vocab = utils.load_embeddings(args.embed_file)
-    print(f"embed_vocab = {embed_vocab.__dict__}")
-    kmer_dict = embed_vocab.stoi
-    print(f"kmer_dict = {kmer_dict}")
+    all_embs, vec_sizes = utils.load_embeddings_no_torchtext(args.kmer_sizes, args.use_cont, args.use_pos, args.use_seq, args.use_aa, args.cont_dir, args.pos_dir, args.seq_dir, args.aa_dir)
+    exit()
     # Load data
     all_reads, all_labels, kmer_dict, num_kmers_per_read = utils.read_fastas_from_dirs_CNN(
         [args.girus_dir, args.virus_dir],
         args.read_size,
         args.kmer_sizes,
         args.use_stepk,
-        use_rev=args.use_rev,
-        kmer_dict=kmer_dict
+        use_rev=args.use_rev
     )
     #print(f"all_reads = {all_reads}\nfirst read = {all_reads[0]}\nfirst read len = {len(all_reads[0])}\nnum_kmers_per_read = {num_kmers_per_read}")
     if args.debug:
         print(f"all_labels = {all_labels}\nunique labels = {np.unique(all_labels)}\nfirst read = {all_reads[0]}"
               f"\nnum_kmers_per_read = {num_kmers_per_read}")
-    # TODO add support for multiple embeddings
-    vec_sizes = [embed_vocab.vectors.size(1)]
     dummy_arr = np.zeros((len(all_reads)))
     dev_kf = KFold(10, shuffle=True)
     for (tmp_train_idx, dev_idx) in dev_kf.split(dummy_arr):
@@ -87,7 +81,7 @@ def main(args):
             test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0,
                                                           drop_last=False)
             #Create model
-            model = mods.KmerCNN(embed_vocab.vectors,
+            model = mods.KmerCNN(all_embs,
                                 num_kmers_per_read,
                                 num_channels,
                                 args.num_convs,
@@ -212,8 +206,14 @@ def get_args():
                         help="path to the virus input dir")
     parser.add_argument("-o", "--output_dir", required=True,
                         help="path to output dir")
-    parser.add_argument("-ef", "--embed_file", required=True,
-                        help="path to the file containing kmer embeddings")
+    parser.add_argument("-cd", "--cont_dir", required=False,
+                        help="path to the directory containing contextual kmer embeddings")
+    parser.add_argument("-pd", "--pos_dir", required=False,
+                        help="path to the dir containing positional kmer embeddings")
+    parser.add_argument("-sd", "--seq_dir", required=False,
+                        help="path to the dir containing sequential kmer embeddings")
+    parser.add_argument("-ad", "--aa_dir", required=False,
+                        help="path to the dir containing aa kmer embeddings")
     parser.add_argument("-kf", "--kfolds", type=int,
                         help="number of kfolds to split for training/testing",
                         default=4)

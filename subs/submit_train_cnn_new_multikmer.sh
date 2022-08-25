@@ -6,7 +6,7 @@ export STDOUT_DIR="./out"
 #init_dir "$STDERR_DIR" "$STDOUT_DIR"
 
 #DIRS
-MULTIKMER_DIR="/xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/test_everything"
+MULTIKMER_DIR="/xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/sorted"
 INPUT_DIR="/xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files"
 
 #TODO CHANGE BACK
@@ -27,7 +27,7 @@ BATCH=50
 KFOLD=4
 
 #LOOPERS
-declare -a KMERS=("3" "6")
+declare -a KMERS=("6")
 declare -a NO_NS=("no_n")
 CONTIGS=(300)
 ORGS=("virus")
@@ -83,12 +83,11 @@ for READ in ${CONTIGS[@]}; do
                                 OUTFLAGS="${OUTFLAGS}${NO_N}"
                                 OUT_FILE="${OUT_DIR}/${KMERSTR}mer_${FILTER}f_${CONV}nc_${FC}fc_${EPOCHS}eps_${OUTFLAGS}_1000filts.txt"
                                 #FIG_DIR="${OUT_DIR}/figs/${KMERSTR}mer_${FILTER}f_${CONV}nc_${FC}fc_${PAT}pa_${EPOCHS}eps_${OUTFLAGS}_1000filts"
-                                NEWCONT_DIR="${CONT_DIR}_${NO_N}"
+                                CONT_DIR="${CONT_DIR}_${NO_N}"
                                 #NEWSEQ_DIR="${SEQ_DIR}_${NO_N}"
                                 #NEWPOS_DIR="${POS_DIR}_${NO_N}"
-                                CONT_FILE="${NEWCONT_DIR}/${KMER}k_5w_100s.txt"
                                 
-                                export PY_ARGS="${FLAG} -gd ${GV_DIR} -vd ${V_DIR} -ef ${CONT_FILE} -r ${READ} -b ${BATCH} -e ${EPOCHS} -o ${OUT_FILE} -fs ${FILTER} -nc ${CONV} -nf ${FC} -kf ${KFOLD} ${KMER}"
+                                export PY_ARGS="${FLAG} -gd ${GV_DIR} -vd ${V_DIR} -cd ${CONT_DIR} -r ${READ} -b ${BATCH} -e ${EPOCHS} -o ${OUT_FILE} -fs ${FILTER} -nc ${CONV} -nf ${FC} -kf ${KFOLD} ${KMER}"
                                 echo $PY_ARGS
                                 if [[ $FLAG == *-g* ]]; then
                                     echo "Using GPU"
