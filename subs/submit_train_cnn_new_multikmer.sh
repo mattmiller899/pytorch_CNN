@@ -11,31 +11,31 @@ INPUT_DIR="/xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_file
 
 #TODO CHANGE BACK
 #POS_DIR="${MULTIKMER_DIR}/pos_in_one_hot"
-#POS_DIR="${MULTIKMER_DIR}/pos_in"
+POS_DIR="${MULTIKMER_DIR}/pos_in"
 CONT_DIR="${MULTIKMER_DIR}/cont_in"
-#SEQ_DIR="${MULTIKMER_DIR}/seq_in"
-#AA_DIR="${MULTIKMER_DIR}/aa_in"
+SEQ_DIR="${MULTIKMER_DIR}/seq_in"
+AA_DIR="${MULTIKMER_DIR}/aa_in"
 #TODO CHANGE BACK
 RESULTS_DIR="./results"
 
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua" "-g -ct -cv -sc -up -us -uc -ua" "-g -ct -cv -sc -up -us -ur -uc" "-g -ct -cv -sc -up -us -uc")
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua")
-declare -a FLAGS=("-d -g -uk -sc -uc -ur")
-#declare -a FLAGS=("-g -ct -cv -sc -uc")
-EPOCHS=10
+#declare -a FLAGS=("-g -uk -sc -uc -up -us -ur -ua")
+declare -a FLAGS=("-g -uk -sc -uc -ua -ur")
+EPOCHS=5
 BATCH=50
 KFOLD=4
 
 #LOOPERS
-declare -a KMERS=("6")
+declare -a KMERS=("9")
 declare -a NO_NS=("no_n")
 CONTIGS=(300)
 ORGS=("virus")
 FILTERS=(3)
-FCS=(2)
+FCS=(4 6)
 #FILTERS=(3)
 #FCS=(2)
-CONVS=(2)
+CONVS=(5)
 
 #ARGS="-q standard -W group_list=bhurwitz -M mattmiller899@email.arizona.edu -m a"
 ARGS="--partition=standard --account=bhurwitz --mail-user=mattmiller899@email.arizona.edu --mail-type=ALL"
@@ -81,13 +81,14 @@ for READ in ${CONTIGS[@]}; do
                                     OUTFLAGS="${OUTFLAGS}monokmer_"
                                 fi
                                 OUTFLAGS="${OUTFLAGS}${NO_N}"
-                                OUT_FILE="${OUT_DIR}/${KMERSTR}mer_${FILTER}f_${CONV}nc_${FC}fc_${EPOCHS}eps_${OUTFLAGS}_1000filts.txt"
+                                OUTPUT_DIR="${OUT_DIR}/${KMERSTR}mer_${FILTER}f_${CONV}nc_${FC}fc_${EPOCHS}eps_${OUTFLAGS}_1000filts"
+                                init_dir "$OUTPUT_DIR" 
                                 #FIG_DIR="${OUT_DIR}/figs/${KMERSTR}mer_${FILTER}f_${CONV}nc_${FC}fc_${PAT}pa_${EPOCHS}eps_${OUTFLAGS}_1000filts"
-                                CONT_DIR="${CONT_DIR}_${NO_N}"
-                                #NEWSEQ_DIR="${SEQ_DIR}_${NO_N}"
-                                #NEWPOS_DIR="${POS_DIR}_${NO_N}"
+                                NEWCONT_DIR="${CONT_DIR}_${NO_N}"
+                                NEWSEQ_DIR="${SEQ_DIR}_${NO_N}"
+                                NEWPOS_DIR="${POS_DIR}_${NO_N}"
                                 
-                                export PY_ARGS="${FLAG} -gd ${GV_DIR} -vd ${V_DIR} -cd ${CONT_DIR} -r ${READ} -b ${BATCH} -e ${EPOCHS} -o ${OUT_FILE} -fs ${FILTER} -nc ${CONV} -nf ${FC} -kf ${KFOLD} ${KMER}"
+                                export PY_ARGS="${FLAG} -gd ${GV_DIR} -vd ${V_DIR} -cd ${NEWCONT_DIR} -pd ${NEWPOS_DIR} -sd ${NEWSEQ_DIR} -ad ${AA_DIR} -r ${READ} -b ${BATCH} -e ${EPOCHS} -o ${OUTPUT_DIR} -fs ${FILTER} -nc ${CONV} -nf ${FC} -kf ${KFOLD} ${KMER}"
                                 echo $PY_ARGS
                                 if [[ $FLAG == *-g* ]]; then
                                     echo "Using GPU"

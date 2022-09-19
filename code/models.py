@@ -27,8 +27,11 @@ class KmerCNN(nn.Module):
         self.STRIDE = stride
         self.VEC_SIZES = vec_sizes
         self.MAX_SIZE = max(vec_sizes)
-        self.CONV_FEATURES = conv_features
-        self.DEVICE = torch.device("cuda" if use_gpu else "cpu")
+        if self.NUM_CHANNELS == 3:
+            self.CONV_FEATURES = 99
+        else:
+            self.CONV_FEATURES = 100
+        self.DEVICE = torch.device("cuda" if use_gpu and torch.cuda.is_available() else "cpu")
         self.GROUPS = self.NUM_CHANNELS
         self.KMER_SIZES = kmer_sizes
         self.VOCAB_SIZE = 0
@@ -64,16 +67,19 @@ class KmerCNN(nn.Module):
         fc_input = 0
         h = self.NUM_KMERS
         w = self.MAX_SIZE
+        if self.debug:
+            print(f"initial h = {h}\ninitial w = {w}")
         for j in range(self.NUM_CONVS):
             (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.FILTER_SIZE, self.STRIDE)
             (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.POOL_SIZE, self.POOL_SIZE)
-            #if self.debug:
-            #    print(f"h = {h} w = {w}")
+            if self.debug:
+                print(f"h = {h} w = {w}")
         fc_input += h * w * self.CONV_FEATURES
         self.fc_sizes = [fc_input]
         self.fc_sizes.extend([self.FC_SIZE if i == 0 else int(self.FC_SIZE / (2 * i)) for i in range(self.NUM_FCS - 1)])
         self.fc_sizes.append(1)
-        #print(f" fc sizes = {self.fc_sizes}")
+        if self.debug:
+            print(f" fc sizes = {self.fc_sizes}")
         self.fcs = nn.ModuleList([nn.Linear(self.fc_sizes[i], self.fc_sizes[i+1]) for i in range(self.NUM_FCS)])
         self.fc_bns = nn.ModuleList([nn.BatchNorm1d(1) for _ in range(self.NUM_FCS - 1)])
 

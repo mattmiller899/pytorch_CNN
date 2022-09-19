@@ -3,7 +3,7 @@
 #SBATCH --ntasks=28
 #SBATCH --mem=168gb
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:00:00
+#SBATCH --time=36:00:00
 
 set -u
 #module load singularity/2/2.6.1

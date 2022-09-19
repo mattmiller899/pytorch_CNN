@@ -14,7 +14,7 @@ from torchsummary import summary
 from pytorch_lamb import Lamb, log_lamb_rs
 import random
 from torch.utils.tensorboard import SummaryWriter
-
+import time
 
 """
 python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -uc -cd embeddings/cont/ -up -pd embeddings/pos -o results/ -g -b 10 -e 1 -sc 3

@@ -1489,7 +1489,8 @@ def read_fastas_from_dirs_CNN(in_dirs, read_size, kmer_sizes, use_stepk=True, us
                         step_size = kmer
                     else:
                         step_size = 1
-                    for_seq = re.sub(r'[NMRWYKVHD]', random.choice(all_nucs), str(record.seq.upper()))
+                    for_seq = str(record.seq.upper())
+                    for_seq = re.sub(r'[BDEFHIJKLMNOPQRSVWXYZ]', random.choice(all_nucs), for_seq)
                     for_seq = re.sub(r'[U]', 'T', for_seq)
                     length = len(for_seq)
                     if length < read_size:
@@ -1505,7 +1506,8 @@ def read_fastas_from_dirs_CNN(in_dirs, read_size, kmer_sizes, use_stepk=True, us
                     # tmp_for = for_seq
                     tmp_nuc_arr.extend(tmp_for)
                     if use_rev:
-                        rev_seq = re.sub(r'[NMRWYKVHD]', random.choice(all_nucs), str(Seq.reverse_complement(record.seq).upper()))
+                        
+                        rev_seq = re.sub(r'[BDEFHIJKLMNOPQRSVWXYZ]', random.choice(all_nucs), str(Seq.reverse_complement(for_seq).upper()))
                         rev_seq = re.sub(r'[U]', 'T', rev_seq)
                         # tmp_rev = rev_seq
                         tmp_rev = []
