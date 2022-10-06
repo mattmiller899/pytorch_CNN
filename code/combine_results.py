@@ -7,8 +7,8 @@ results_dir = sys.argv[1]
 out_file = sys.argv[2]
 
 with open(out_file, "w") as out:
-    out.write("ID,Kmer,NC,FC,Embeds,F1_Avg,F1_Std,Prec_Avg,Prec_Std,Rec_Avg,Rec_Std\n")
-    for in_dir in glob.glob(f"{results_dir}/*5eps*"):
+    out.write("ID,Kmer,NC,FC,Epochs,Embeds,F1_Avg,F1_Std,Prec_Avg,Prec_Std,Rec_Avg,Rec_Std\n")
+    for in_dir in glob.glob(f"{results_dir}/*"):
         #print(f"{in_dir}")
         for in_file in glob.glob(f"{in_dir}/r300*"):
             #print(f"{in_file}")
@@ -48,12 +48,9 @@ with open(out_file, "w") as out:
                 except:
                     pass
                 try:
-                    bn.remove("5eps")
-                except:
-                    pass
-                try:
                     bn.remove("revfor")
                 except:
                     pass
                 #print(bn)
-                out.write(f"{'_'.join(bn[0:])},{bn[0]},{bn[1]},{bn[2]},{'_'.join(bn[3:])},{avgs[-3]},{stds[-3]},{avgs[-2]},{stds[-2]},{avgs[-1]},{stds[-1]}\n")
+                #out.write(f"{'_'.join(bn[0:])},{bn[0]},{bn[1]},{bn[2]},{'_'.join(bn[3:])},{avgs[-3]},{stds[-3]},{avgs[-2]},{stds[-2]},{avgs[-1]},{stds[-1]}\n")
+                out.write(f"{'_'.join(bn[0:])},{bn[0]},{bn[1]},{bn[2]},{bn[3]},{'_'.join(bn[4:])},{avgs[-3]},{stds[-3]},{avgs[-2]},{stds[-2]},{avgs[-1]},{stds[-1]}\n")

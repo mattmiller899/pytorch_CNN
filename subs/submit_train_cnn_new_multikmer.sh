@@ -16,18 +16,18 @@ CONT_DIR="${MULTIKMER_DIR}/cont_in"
 SEQ_DIR="${MULTIKMER_DIR}/seq_in"
 AA_DIR="${MULTIKMER_DIR}/aa_in"
 #TODO CHANGE BACK
-RESULTS_DIR="./results"
+RESULTS_DIR="./new_results"
 
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua" "-g -ct -cv -sc -up -us -uc -ua" "-g -ct -cv -sc -up -us -ur -uc" "-g -ct -cv -sc -up -us -uc")
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua")
-#declare -a FLAGS=("-g -uk -sc -uc -up -us -ur -ua")
-declare -a FLAGS=("-g -uk -sc -uc -ua -ur")
+declare -a FLAGS=("-g -uk -sc -uc -up -us -ur -ua")
+#declare -a FLAGS=("-g -uk -sc -uc -ua -ur")
 EPOCHS=5
 BATCH=50
 KFOLD=4
 
 #LOOPERS
-declare -a KMERS=("9")
+declare -a KMERS=("6")
 declare -a NO_NS=("no_n")
 CONTIGS=(300)
 ORGS=("virus")
@@ -35,7 +35,7 @@ FILTERS=(3)
 FCS=(4 6)
 #FILTERS=(3)
 #FCS=(2)
-CONVS=(5)
+CONVS=(4 5)
 
 #ARGS="-q standard -W group_list=bhurwitz -M mattmiller899@email.arizona.edu -m a"
 ARGS="--partition=standard --account=bhurwitz --mail-user=mattmiller899@email.arizona.edu --mail-type=ALL"
