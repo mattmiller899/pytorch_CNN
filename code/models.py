@@ -76,7 +76,8 @@ class KmerCNN(nn.Module):
                 print(f"h = {h} w = {w}")
         fc_input += h * w * self.CONV_FEATURES
         self.fc_sizes = [fc_input]
-        self.fc_sizes.extend([self.FC_SIZE if i == 0 else int(self.FC_SIZE / (2 * i)) for i in range(self.NUM_FCS - 1)])
+        #self.fc_sizes.extend([self.FC_SIZE if i == 0 else int(self.FC_SIZE / (2 * i)) for i in range(self.NUM_FCS - 1)])
+        self.fc_sizes.extend([self.FC_SIZE for i in range(self.NUM_FCS - 1)])
         self.fc_sizes.append(1)
         if self.debug:
             print(f" fc sizes = {self.fc_sizes}")
