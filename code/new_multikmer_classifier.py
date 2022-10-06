@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import *
 from torchsummary import summary
-from pytorch_lamb import Lamb, log_lamb_rs
+#from pytorch_lamb import Lamb, log_lamb_rs
 import random
 from torch.utils.tensorboard import SummaryWriter
 import time

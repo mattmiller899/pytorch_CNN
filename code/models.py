@@ -58,7 +58,7 @@ class KmerCNN(nn.Module):
                                           groups=self.GROUPS, dilation=self.DILATION,
                                           padding=self.PADDING, stride=self.STRIDE)])
         self.convolutions.extend([nn.Conv2d(self.CONV_FEATURES, self.CONV_FEATURES, self.FILTER_SIZE,
-                                            groups=1, dilation=self.DILATION,
+                                            groups=self.GROUPS, dilation=self.DILATION,
                                             padding=self.PADDING, stride=self.STRIDE)
                                   for _ in range(1, self.NUM_CONVS)])
         self.conv_bns = nn.ModuleList([nn.BatchNorm2d(self.CONV_FEATURES) for _ in range(self.NUM_CONVS)])
