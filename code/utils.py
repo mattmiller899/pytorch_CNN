@@ -1623,3 +1623,139 @@ def read_embeddings_no_torchtext(kmer_sizes, emb_dir):
     emb_size = len(emb_arr[0])
     emb_tensor = torch.from_numpy(emb_arr)
     return emb_tensor, emb_size
+
+
+def read_fastas_from_dirs_CNN_freqs(in_dirs, read_size, kmer_sizes, use_stepk=True, use_rev=True, kmer_dict=None):
+    all_reads, all_labels, all_freqs = [], [], []
+    all_nucs = ["A", "C", "T", "G"]
+    if kmer_dict == None:
+        all_kmers = []
+        for k in kmer_sizes:
+            all_kmers.extend(generate_kmers(k))
+        kmer_dict = {}
+        for i, tmp_kmer in enumerate(all_kmers):
+            kmer_dict[tmp_kmer] = i
+    for label_num, in_dir in enumerate(in_dirs):
+        for count, in_file in enumerate(glob.glob(f"{in_dir}/*.fa")):
+            print(f"reading {in_file}")
+            for record in SeqIO.parse(in_file, "fasta"):
+                tmp_nuc_arr = []
+                tmp_count_arr = []
+                skipped = False
+                for kmer in kmer_sizes:
+                    if use_stepk:
+                        step_size = kmer
+                    else:
+                        step_size = 1
+                    for_seq = str(record.seq.upper())
+                    for_seq = re.sub(r'[BDEFHIJKLMNOPQRSVWXYZ]', random.choice(all_nucs), for_seq)
+                    for_seq = re.sub(r'[U]', 'T', for_seq)
+                    length = len(for_seq)
+                    if length < read_size:
+                        skipped = True
+                        continue
+                    # seq and rev_comp
+                    tmp_for = []
+                    tmp_counts = [0 for i in range(kmer)]
+                    num_kmers = 0
+                    for j in range(0, read_size - kmer + 1, step_size):
+                        # try:
+                        tmp_kmer = kmer_dict[for_seq[j:j + kmer]]
+                        tmp_for.append(tmp_kmer)
+                        tmp_counts[tmp_kmer] += 1
+                        num_kmers += 1
+                        # except:
+                        #    tmp_for.append(nuc_dict[random.choice(all_nucs)])
+                    # tmp_for = for_seq
+                    tmp_nuc_arr.extend(tmp_for)
+                    if use_rev:
+                        num_kmers *= 2
+                        rev_seq = re.sub(r'[BDEFHIJKLMNOPQRSVWXYZ]', random.choice(all_nucs),
+                                         str(Seq.reverse_complement(for_seq).upper()))
+                        rev_seq = re.sub(r'[U]', 'T', rev_seq)
+                        # tmp_rev = rev_seq
+                        tmp_rev = []
+                        for j in range(0, read_size - kmer + 1, step_size):
+                            # try:
+                            tmp_kmer = kmer_dict[rev_seq[j:j + kmer]]
+                            tmp_rev.append(tmp_kmer)
+                            tmp_counts[tmp_kmer] += 1
+                            # except:
+                            #    tmp_rev.append(nuc_dict[random.choice(all_nucs)])
+                        tmp_nuc_arr.extend(tmp_rev)
+                if not skipped:
+                    all_reads.append(tmp_nuc_arr)
+                    all_labels.append(label_num)
+                    all_freqs.append([i / num_kmers for i in tmp_counts])
+                    print(f"all_freqs = {all_freqs}")
+                    exit()
+                # print(f"tmp_nuc_arr = {tmp_nuc_arr}\ntmp_arr = {tmp_arr}")
+                # exit()
+    num_kmers_per_read = len(all_reads[0])
+    return np.array(all_reads), np.array(all_labels), np.array(all_freqs), kmer_dict, num_kmers_per_read
+
+
+class ReadsDatasetCNNFreqs(torch.utils.data.Dataset):
+    def __init__(self, all_reads, all_labels, all_freqs):
+        self.num_reads = len(all_reads)
+        self.labels = torch.LongTensor(all_labels)
+        self.reads = torch.LongTensor(all_reads)
+        self.freqs = torch.LongTensor(all_freqs)
+
+    def __len__(self):
+        return len(self.reads)
+
+    def __getitem__(self, idx):
+        curr_read = self.reads[idx]
+        curr_label = self.labels[idx]
+        curr_freqs = self.freqs[idx]
+        return curr_read, curr_label, curr_freqs
+        #return self.embedding(torch.LongTensor(curr_read)), torch.LongTensor(curr_label)
+
+
+def test_CNNFreqs(model, test_dataloader, criterion, device, args, num_classes):
+    with torch.no_grad():
+        preds = []
+        truths = []
+        round_preds = []
+        total_test_loss = 0.0
+        print(f"len test_dataloader = {len(test_dataloader)}")
+        for (data, labels, freqs) in test_dataloader:
+            data, labels, freqs = data.to(device), labels.float().to(device), freqs.float().to(device)
+            if args.debug:
+                print(f"data = {data}\nlabels = {labels}")
+            pred = model(data, freqs).view(labels.size(0))
+            if args.debug:
+                print(f"pred = {pred}")
+            #loss = criterion(torch.log(pred), labels)
+            loss = criterion(pred, labels)
+            total_test_loss += float(loss.item())
+            round_pred = torch.round(pred).cpu().numpy()
+            # print(f"round_pred = {round_pred}")
+            round_preds.extend(round_pred)
+            preds.extend(pred.cpu().numpy())
+            truths.extend(labels.cpu().numpy())
+        # print(f"rounds = {round_preds}\npreds = {preds}\ntruths = {truths}")
+        truths = np.array(truths)
+        print(f"truths shape = {truths.shape}")
+        print(f"unique truths = {np.unique(truths)}\nunique round_preds = {np.unique(round_preds)}")
+        acc = accuracy_score(truths, round_preds)
+        f1 = f1_score(truths, round_preds, average="macro")
+        prec = precision_score(truths, round_preds, average="macro")
+        rec = recall_score(truths, round_preds, average="macro")
+        """
+        # Convert truths to 2d array for AUROC
+        truths = np.array(truths)
+        truths_2d = np.zeros((truths.size, truths.max() + 1))
+        print(f"truths_2d size = {truths_2d.shape}")
+        truths_2d[np.arange(truths.size), truths] = 1
+        np.set_printoptions(threshold=np.inf)
+        print(f"truths_2d = {truths_2d}\nunique truths_2d = {np.unique(truths_2d)}\ntruths_2d shape = {truths_2d.shape}\npreds len = {len(preds)}")
+        preds_np = np.array(preds)
+        print(f"preds_np shape = {preds_np.shape}")
+        auprc = average_precision_score(truths_2d, preds_np)
+        auroc = roc_auc_score(truths_2d, preds_np, multi_class="ovr")
+        """
+        test_loss = total_test_loss / len(test_dataloader)
+        return test_loss, acc, f1, prec, rec
+        #return test_loss, acc, f1, prec, rec, auprc, auroc
