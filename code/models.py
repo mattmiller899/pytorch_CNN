@@ -11,7 +11,7 @@ class KmerCNNFreqs(nn.Module):
     def __init__(self, vecs, num_kmers, num_channels, num_convs, num_fcs, vec_sizes, fc_size=128, conv_features=100,
                  pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False, debug=False,
                  kmer_sizes=None):
-        super(KmerCNN, self).__init__()
+        super(KmerCNNFreqs, self).__init__()
         # Save parameters
         self.debug = debug
         self.FC_SIZE = fc_size
@@ -44,7 +44,7 @@ class KmerCNNFreqs(nn.Module):
         # Embeddings
         self.embeddings = nn.ModuleList()
         if num_channels == 1:
-            self.embeddings.append(nn.Embedding.from_pretrained(vecs))
+            self.embeddings.append(nn.Embedding.from_pretrained(vecs, freeze=True))
         else:
             for i in range(self.NUM_CHANNELS):
                 v = vecs[i]
@@ -76,7 +76,9 @@ class KmerCNNFreqs(nn.Module):
             if self.debug:
                 print(f"h = {h} w = {w}")
         fc_input += h * w * self.CONV_FEATURES
-        fc_input += self.NUM_KMERS
+        print(f"fc_input = {fc_input}")
+        fc_input += self.VOCAB_SIZE
+        print(f"fc_input = {fc_input}")
         self.fc_sizes = [fc_input]
         # self.fc_sizes.extend([self.FC_SIZE if i == 0 else int(self.FC_SIZE / (2 * i)) for i in range(self.NUM_FCS - 1)])
         self.fc_sizes.extend([self.FC_SIZE for i in range(self.NUM_FCS - 1)])
@@ -108,8 +110,13 @@ class KmerCNNFreqs(nn.Module):
             # if self.debug:
             #    print(f"conv_input.size = {conv_input.size()}")
             # print(f"conv_input size = {conv_input.size()}")
-        fc_input = conv_input.view(batch_size, 1, self.fc_sizes[0])  # (batch, FC_sizes[0])
-        fc_inpit = torch.cat((fc_input, freqs), 1) # (batch, FC_sizes[0]
+        #print(f"conv_input.shape = {conv_input.size()}")
+        fc_input = conv_input.view(batch_size, 1, self.fc_sizes[0] - self.VOCAB_SIZE)  # (batch, FC_sizes[0] - vocab_size)
+        #print(f"fc_input.size = {fc_input.size()}")
+        freqs = freqs.unsqueeze(1)
+        #print(f"freqs.size = {freqs.size()}")
+        fc_input = torch.cat((fc_input, freqs), 2) # (batch, 1, FC_sizes[0])
+        #print(f"fc_input.size = {fc_input.size()}")
         # print(f"fc input size = {fc_input.size()}")
         for i in range(self.NUM_FCS - 1):
             fc_input = F.relu(self.fcs[i](fc_input))  # (batch, FC2_IN)
@@ -128,7 +135,7 @@ class KmerCNNFreqs(nn.Module):
 
 class KmerCNN(nn.Module):
     def __init__(self, vecs, num_kmers, num_channels, num_convs, num_fcs, vec_sizes, fc_size=128, conv_features=100,
-                 pool_size=2, filter_size=3, dilation=1, padding=0, stride=1, use_gpu=False, debug=False, kmer_sizes=None):
+                 pool_size=2, filter_size=3, dilation=1, padding=3, stride=1, use_gpu=False, debug=False, kmer_sizes=None):
         super(KmerCNN, self).__init__()
         #Save parameters
         self.debug = debug
@@ -162,7 +169,7 @@ class KmerCNN(nn.Module):
         #Embeddings
         self.embeddings = nn.ModuleList()
         if num_channels == 1:
-            self.embeddings.append(nn.Embedding.from_pretrained(vecs))
+            self.embeddings.append(nn.Embedding.from_pretrained(vecs, freeze=False))
         else:
             for i in range(self.NUM_CHANNELS):
                 v = vecs[i]
@@ -171,7 +178,7 @@ class KmerCNN(nn.Module):
                 #print(f"{i} v size= {v.size()}\n{i} v = {v}")
                 padded = torch.zeros(self.VOCAB_SIZE, self.MAX_SIZE)
                 padded[:, :self.VEC_SIZES[i]] = v
-                self.embeddings.append(nn.Embedding.from_pretrained(padded, freeze=True))
+                self.embeddings.append(nn.Embedding.from_pretrained(padded, freeze=False))
         #Convolutions
         self.convolutions = nn.ModuleList([nn.Conv2d(self.NUM_CHANNELS, self.CONV_FEATURES, self.FILTER_SIZE,
                                           groups=self.GROUPS, dilation=self.DILATION,
@@ -190,7 +197,7 @@ class KmerCNN(nn.Module):
             print(f"initial h = {h}\ninitial w = {w}")
         for j in range(self.NUM_CONVS):
             (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.FILTER_SIZE, self.STRIDE)
-            (h, w) = utils.output_size(h, w, self.PADDING, self.DILATION, self.POOL_SIZE, self.POOL_SIZE)
+            (h, w) = utils.output_size(h, w, 0, self.DILATION, self.POOL_SIZE, self.POOL_SIZE)
             if self.debug:
                 print(f"h = {h} w = {w}")
         fc_input += h * w * self.CONV_FEATURES
@@ -224,7 +231,7 @@ class KmerCNN(nn.Module):
             conv_input = self.conv_bns[i](conv_input)
             #if self.debug:
             #    print(f"conv_input.size = {conv_input.size()}")
-            #print(f"conv_input size = {conv_input.size()}")
+            print(f"conv_input size = {conv_input.size()}")
         fc_input = conv_input.view(batch_size, 1, self.fc_sizes[0]) # (batch, FC_sizes[0])
         #print(f"fc input size = {fc_input.size()}")
         for i in range(self.NUM_FCS - 1):

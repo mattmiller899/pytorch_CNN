@@ -16,13 +16,13 @@ CONT_DIR="${MULTIKMER_DIR}/cont_in"
 SEQ_DIR="${MULTIKMER_DIR}/seq_in"
 AA_DIR="${MULTIKMER_DIR}/aa_in"
 #TODO CHANGE BACK
-RESULTS_DIR="./new_results"
+RESULTS_DIR="./new_results_padding_unfreeze"
 
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua" "-g -ct -cv -sc -up -us -uc -ua" "-g -ct -cv -sc -up -us -ur -uc" "-g -ct -cv -sc -up -us -uc")
 #declare -a FLAGS=("-g -ct -cv -sc -up -us -ur -uc -ua")
 declare -a FLAGS=("-g -uk -sc -uc -up -us -ur -ua")
 #declare -a FLAGS=("-g -uk -sc -uc -ua -ur")
-EPOCHS=5
+EPOCHS=10
 BATCH=50
 KFOLD=4
 
@@ -33,9 +33,11 @@ CONTIGS=(300)
 ORGS=("virus")
 FILTERS=(3)
 FCS=(4 6)
+#FCS=(4)
 #FILTERS=(3)
 #FCS=(2)
-CONVS=(4 5)
+CONVS=(4 5 6 7 8)
+#CONVS=(4)
 
 #ARGS="-q standard -W group_list=bhurwitz -M mattmiller899@email.arizona.edu -m a"
 ARGS="--partition=standard --account=bhurwitz --mail-user=mattmiller899@email.arizona.edu --mail-type=ALL"
@@ -94,7 +96,7 @@ for READ in ${CONTIGS[@]}; do
                                     echo "Using GPU"
                                     #echo "qsub $ARGS -v PY_ARGS -N t${KMERSTR}_${FC}fc_${CONV}c_${FILTER}f -e $STDERR_DIR -o $STDOUT_DIR ./run_train_multikmer_gpu.sh"
                                     #JOB_ID=`qsub $ARGS -v PY_ARGS -N t${KMERSTR}_${FC}fc_${CONV}c_${FILTER}f -e $STDERR_DIR -o $STDOUT_DIR ./run_train_cnn_multikmer_gpu.sh`
-                                    JOB_ID=`sbatch $ARGS --export=PY_ARGS --job-name=t${KMERSTR}_${FC}fc_${CONV}c_${FILTER}f_${READ} -e $STDERR_DIR/%x.err -o $STDOUT_DIR/%x.out ./runs/run_train_cnn_new_multikmer.sh`
+                                    JOB_ID=`sbatch $ARGS --export=PY_ARGS --job-name=unfreeze_padded_t${KMERSTR}_${FC}fc_${CONV}c_${FILTER}f_${READ} -e $STDERR_DIR/%x.err -o $STDOUT_DIR/%x.out ./runs/run_train_cnn_new_multikmer.sh`
                                 else
                                     echo "Using CPU"
                                     #JOB_ID=`qsub $ARGS -v PY_ARGS -N train_${KMERSTR} -e $STDERR_DIR -o $STDOUT_DIR ./run_train_cnn_multikmer_cpu.sh`

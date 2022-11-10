@@ -18,7 +18,10 @@ import time
 
 """
 python code/new_multikmer_classifier.py -gd data/girus -vd data/virus -uc -cd embeddings/cont/ -up -pd embeddings/pos -o results/ -g -b 10 -e 1 -sc 3
+
+singularity exec --nv ~/singularity/pytorch.img python3.6 ./code/new_multikmer_classifier.py -uk -sc -g -uc -up -us -ur -ua -gd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/test/girus/300 -vd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/READ_files/test/virus/300 -cd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/sorted/cont_in_no_n -pd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/sorted/pos_in_no_n -sd /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/sorted/seq_in_no_n -ad /xdisk/bhurwitz/mig2020/rsgrps/bhurwitz/mattmiller899/girus/embeddings/sorted/aa_in -r 300 -b 50 -e 5 -o ./new_results_freqs/300/virus/6mer_3f_4nc_4fc_5eps_revfor_cont_seq_pos_aa_monokmer_no_n_1000filts -fs 3 -nc 4 -nf 4 -kf 4 6
 """
+
 
 
 def main(args):
@@ -185,6 +188,9 @@ def main(args):
             #out.write(f"{curr_fold},{best_dev_epoch},{test_loss:.4f},{acc:.4f},{f1:.4f},{prec:.4f},{rec:.4f},"
             #          f"{auprc:.4f},{auroc:.4f}\n")
             out.write(f"{curr_fold},{best_dev_epoch},{test_loss:.4f},{acc:.4f},{f1:.4f},{prec:.4f},{rec:.4f}\n")
+            best_model_path = f"{model_dir}/model_r{args.read_size}_k{args.kmer_sizes}_nf{args.num_fcs}_" \
+                             f"fs{args.filter_size}_nc{args.num_convs}_kf{curr_fold}_best.pt"
+            torch.save(model.state_dict(), best_model_path)
         """
         out.write(f"-1,-1,{np.average(test_losses):.4f},{np.average(accs):.4f},{np.average(f1s):.4f},"
                   f"{np.average(precs):.4f},{np.average(recs):.4f},{np.average(auprcs):.4f},{np.average(aurocs):.4f}\n")

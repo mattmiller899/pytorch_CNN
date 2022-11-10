@@ -1628,6 +1628,7 @@ def read_embeddings_no_torchtext(kmer_sizes, emb_dir):
 def read_fastas_from_dirs_CNN_freqs(in_dirs, read_size, kmer_sizes, use_stepk=True, use_rev=True, kmer_dict=None):
     all_reads, all_labels, all_freqs = [], [], []
     all_nucs = ["A", "C", "T", "G"]
+    print(f"in here")
     if kmer_dict == None:
         all_kmers = []
         for k in kmer_sizes:
@@ -1656,12 +1657,13 @@ def read_fastas_from_dirs_CNN_freqs(in_dirs, read_size, kmer_sizes, use_stepk=Tr
                         continue
                     # seq and rev_comp
                     tmp_for = []
-                    tmp_counts = [0 for i in range(kmer)]
+                    tmp_counts = [0 for i in range(4 ** kmer)]
                     num_kmers = 0
                     for j in range(0, read_size - kmer + 1, step_size):
                         # try:
                         tmp_kmer = kmer_dict[for_seq[j:j + kmer]]
                         tmp_for.append(tmp_kmer)
+                        #print(f"tmp_kmer = {tmp_kmer}\ntmp_counts = {len(tmp_counts)}")
                         tmp_counts[tmp_kmer] += 1
                         num_kmers += 1
                         # except:
@@ -1687,8 +1689,7 @@ def read_fastas_from_dirs_CNN_freqs(in_dirs, read_size, kmer_sizes, use_stepk=Tr
                     all_reads.append(tmp_nuc_arr)
                     all_labels.append(label_num)
                     all_freqs.append([i / num_kmers for i in tmp_counts])
-                    print(f"all_freqs = {all_freqs}")
-                    exit()
+                    #print(f"all_freqs = {all_freqs}")
                 # print(f"tmp_nuc_arr = {tmp_nuc_arr}\ntmp_arr = {tmp_arr}")
                 # exit()
     num_kmers_per_read = len(all_reads[0])
